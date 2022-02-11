@@ -3,13 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
-using VRage.Game.ObjectBuilders.Components.BankingAndCurrency;
 using VRage.ModAPI;
 using VRage.Utils;
+using Sandbox.Game.SessionComponents;
+using Sandbox.Game;
+using Sandbox.Game.World.Generator;
+using VRage.ObjectBuilders;
+using Sandbox.Definitions;
+using Sandbox.Game.World;
 
 namespace Dealer_Ship.Data.Scripts
 {
@@ -25,6 +29,8 @@ namespace Dealer_Ship.Data.Scripts
         int STATIONTICK = 600;
         int currenTick = 0;
 
+
+
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             base.Init(sessionComponent);
@@ -34,6 +40,9 @@ namespace Dealer_Ship.Data.Scripts
             stations = new StationsData();
             if (!bIsServer)
                 return;
+
+            
+
 
             if (!bInitialized)
             {
@@ -108,7 +117,7 @@ namespace Dealer_Ship.Data.Scripts
                     } else
                     {
                         //try to get station grid
-                        IMyEntity ent = MyAPIGateway.Entities.GetEntityById(station.station.StationEntityId);
+                        VRage.ModAPI.IMyEntity ent = MyAPIGateway.Entities.GetEntityById(station.station.StationEntityId);
                         if(ent!=null)
                         {
                             if (ent as IMyCubeGrid != null)
@@ -420,7 +429,6 @@ namespace Dealer_Ship.Data.Scripts
                     var faction = factionobj.Factions.Find(f => f.FactionId == fo.FactionId);
                     if (faction != null)
                     {
-
                         return faction.Stations;
                     }
                 }
@@ -466,7 +474,7 @@ namespace Dealer_Ship.Data.Scripts
                         station = faction.Stations.Find(s => s.StationEntityId == grid.EntityId);
                         if (station != null)
                         {
-
+                            
                             return true;
                         }
 
@@ -475,6 +483,53 @@ namespace Dealer_Ship.Data.Scripts
             }
             station = null;
             return false;
+        }
+
+        public int CalculateItemMinimalPrice(MyDefinitionId itemId, float baseCostProductionSpeedMultiplier, int minimalPrice)
+        {
+            MyPhysicalItemDefinition definition = null;
+            if (MyDefinitionManager.Static.TryGetDefinition(itemId, out definition) && definition.MinimalPricePerUnit != -1)
+            {
+                minimalPrice += definition.MinimalPricePerUnit;
+                return minimalPrice;
+            }
+
+            MyBlueprintDefinitionBase definition2 = null;
+            if (!MyDefinitionManager.Static.TryGetBlueprintDefinitionByResultId(itemId, out definition2))
+            {
+                return minimalPrice;
+            }
+            
+            float num = definition.IsIngot ? 1f : MyAPIGateway.Session.AssemblerEfficiencyMultiplier;
+            int num2 = 0;
+            MyBlueprintDefinitionBase.Item[] prerequisites = definition2.Prerequisites;
+            for (int i = 0; i < prerequisites.Length; i++)
+            {
+                MyBlueprintDefinitionBase.Item item = prerequisites[i];
+                int minimalPrice2 = 0;
+                minimalPrice = CalculateItemMinimalPrice(item.Id, baseCostProductionSpeedMultiplier, minimalPrice2);
+                float num3 = (float)item.Amount / num;
+                num2 += (int)((float)minimalPrice2 * num3);
+            }
+
+            float num4 = definition.IsIngot ? MyAPIGateway.Session.RefinerySpeedMultiplier : MyAPIGateway.Session.AssemblerSpeedMultiplier;
+            for (int j = 0; j < definition2.Results.Length; j++)
+            {
+                MyBlueprintDefinitionBase.Item item2 = definition2.Results[j];
+                if (item2.Id == itemId)
+                {
+                    float num5 = (float)item2.Amount;
+                    if (num5 != 0f)
+                    {
+                        float num6 = 1f + (float)Math.Log(definition2.BaseProductionTimeInSeconds + 1f) * baseCostProductionSpeedMultiplier / num4;
+                        minimalPrice += (int)((float)num2 * (1f / num5) * num6);
+                        break;
+                    }
+
+                    MyLog.Default.WriteToLogAndAssert("Amount is 0 for - " + item2.Id);
+                }
+            }
+            return minimalPrice;
         }
         #endregion
 
@@ -551,6 +606,13 @@ namespace Dealer_Ship.Data.Scripts
 
     }
 
+    public class ShipInformation
+    {
+        public IMyCubeGrid shipGrid = null;
+        public int shipPrice = 0;
+
+    }
+
     public class StationData
     {
         public MyObjectBuilder_Station station = null;
@@ -562,7 +624,60 @@ namespace Dealer_Ship.Data.Scripts
         public IMyShipConnector smallShipConnector = null;
         public IMyShipConnector largeShipConnector = null;
         public bool hasBlocks = false;
+        ShipInformation shipInfo = null;
+        
+        void SetShipInfo(IMyCubeGrid grid)
+        {
+            shipInfo = new ShipInformation();
+            shipInfo.shipGrid = grid;
 
+
+            if (shipInfo.shipGrid != null)
+            {
+                shipInfoPanel.WriteText("Ship Connected: " + shipInfo.shipGrid.CustomName + "\n");
+                var blocks = shipInfo.shipGrid.GetFatBlocks<IMyCubeBlock>();
+
+
+                int calculatedprice = 0;
+
+                foreach (var block in blocks)
+                {
+                    var cbobj = block.GetObjectBuilderCubeBlock();
+                    if (cbobj != null)
+                    {
+                        var constructionInv = cbobj.ConstructionInventory;
+                        if (constructionInv != null)
+                        {
+                            foreach (var item in constructionInv.Items)
+                            {
+                                calculatedprice += DealerShip.main.CalculateItemMinimalPrice(new MyDefinitionId(item.TypeId), 1, 0);
+
+                            }
+                        }
+                    }
+                }
+                shipInfo.shipPrice = calculatedprice;
+                shipInfoPanel.WriteText("Sell: $" + (int)(shipInfo.shipPrice*0.85) + "\n", true);
+                shipInfoPanel.WriteText("Blocks: " + blocks.Count() + "\n", true);
+                var cargos = shipInfo.shipGrid.GetFatBlocks<IMyCargoContainer>();
+                shipInfoPanel.WriteText("Cargo: " + cargos.Count() + "\n", true);
+                var gastanks = shipInfo.shipGrid.GetFatBlocks<IMyGasTank>();
+                shipInfoPanel.WriteText("Hydrogen Tanks: " + gastanks.Count() + "\n", true);
+                var batteries = shipInfo.shipGrid.GetFatBlocks<IMyBatteryBlock>();
+                shipInfoPanel.WriteText("Batteries: " + batteries.Count() + "\n", true);
+                var reactors = shipInfo.shipGrid.GetFatBlocks<IMyReactor>();
+                shipInfoPanel.WriteText("Reactors: " + reactors.Count() + "\n", true);
+                var refinery = shipInfo.shipGrid.GetFatBlocks<IMyRefinery>();
+                shipInfoPanel.WriteText("Refineries: " + refinery.Count() + "\n", true);
+                var assemblers = shipInfo.shipGrid.GetFatBlocks<IMyAssembler>();
+                shipInfoPanel.WriteText("Assemblers: " + assemblers.Count() + "\n", true);
+
+
+
+
+            }
+        }
+        
         public void SmallShipConnector_UpdateTimerTriggered(IMyFunctionalBlock obj)
         {
             if(smallShipConnector != null)
@@ -570,30 +685,18 @@ namespace Dealer_Ship.Data.Scripts
                 if(smallShipConnector.Status == Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
                 {
                     //MyAPIGateway.Utilities.ShowMessage("DEALER", "SMALL SHIP CONNECTED");
-                    if(shipInfoPanel!=null && smallShipConnector.OtherConnector!=null)
+                    if(shipInfoPanel!=null && smallShipConnector.OtherConnector!=null && shipInfo == null)
                     {
-                        
-                        List<IMySlimBlock> blocks = new List<IMySlimBlock>();
                         IMyCubeGrid grid = smallShipConnector.OtherConnector.Parent as IMyCubeGrid;
-                        if (grid != null)
+                        if(grid != null)
                         {
-                            shipInfoPanel.WriteText("Ship Connected: " + grid.CustomName +"\n");
-                            grid.GetBlocks(blocks);
-                            shipInfoPanel.WriteText("Blocks: "+ blocks.Count + "\n", true);
-                            var cargos = grid.GetFatBlocks<IMyCargoContainer>();
-                            shipInfoPanel.WriteText("Cargo: " + cargos.Count() + "\n", true);
-                            var gastanks = grid.GetFatBlocks<IMyGasTank>();
-                            shipInfoPanel.WriteText("Hydrogen Tanks: " + gastanks.Count() + "\n", true);
-                            var batteries = grid.GetFatBlocks<IMyBatteryBlock>();
-                            shipInfoPanel.WriteText("Batteries: " + batteries.Count() + "\n", true);
-                            var reactors = grid.GetFatBlocks<IMyReactor>();
-                            shipInfoPanel.WriteText("Reactors: " + reactors.Count() + "\n", true);
-                            var refinery = grid.GetFatBlocks<IMyRefinery>();
-                            shipInfoPanel.WriteText("Refineries: " + refinery.Count() + "\n", true);
-                            var assemblers = grid.GetFatBlocks<IMyAssembler>();
-                            shipInfoPanel.WriteText("Assemblers: " + assemblers.Count() + "\n", true);
+                            SetShipInfo(grid);
                         }
                     }
+                }
+                if (largeShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected && smallShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
+                {
+                    shipInfo = null;
                 }
             }
         }
@@ -605,30 +708,18 @@ namespace Dealer_Ship.Data.Scripts
                 if (largeShipConnector.Status == Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
                 {
                     //MyAPIGateway.Utilities.ShowMessage("DEALER", "SMALL SHIP CONNECTED");
-                    if (shipInfoPanel != null && largeShipConnector.OtherConnector != null)
+                    if (shipInfoPanel != null && largeShipConnector.OtherConnector != null && shipInfo == null)
                     {
-
-                        List<IMySlimBlock> blocks = new List<IMySlimBlock>();
-                        IMyCubeGrid grid = largeShipConnector.OtherConnector.Parent as IMyCubeGrid;
+                        IMyCubeGrid grid = smallShipConnector.OtherConnector.Parent as IMyCubeGrid;
                         if (grid != null)
                         {
-                            shipInfoPanel.WriteText("Ship Connected: " + grid.CustomName + "\n");
-                            grid.GetBlocks(blocks);
-                            shipInfoPanel.WriteText("Blocks: " + blocks.Count + "\n", true);
-                            var cargos = grid.GetFatBlocks<IMyCargoContainer>();
-                            shipInfoPanel.WriteText("Cargo: " + cargos.Count() + "\n", true);
-                            var gastanks = grid.GetFatBlocks<IMyGasTank>();
-                            shipInfoPanel.WriteText("Hydrogen Tanks: " + gastanks.Count() + "\n", true);
-                            var batteries = grid.GetFatBlocks<IMyBatteryBlock>();
-                            shipInfoPanel.WriteText("Batteries: " + batteries.Count() + "\n", true);
-                            var reactors = grid.GetFatBlocks<IMyReactor>();
-                            shipInfoPanel.WriteText("Reactors: " + reactors.Count() + "\n", true);
-                            var refinery = grid.GetFatBlocks<IMyRefinery>();
-                            shipInfoPanel.WriteText("Refineries: " + refinery.Count() + "\n", true);
-                            var assemblers = grid.GetFatBlocks<IMyAssembler>();
-                            shipInfoPanel.WriteText("Assemblers: " + assemblers.Count() + "\n", true);
+                            SetShipInfo(grid);
                         }
                     }
+                }
+                if (largeShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected && smallShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
+                {
+                    shipInfo = null;
                 }
             }
         }
