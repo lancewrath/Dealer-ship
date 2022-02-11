@@ -290,6 +290,7 @@ namespace Dealer_Ship.Data.Scripts
                             if (cblock as IMyShipConnector != null)
                             {
                                 sData.smallShipConnector = cblock as IMyShipConnector;
+                                sData.smallShipConnector.UpdateTimerTriggered += sData.SmallShipConnector_UpdateTimerTriggered;
                                 //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got small connector");
                             }
                         }
@@ -299,6 +300,7 @@ namespace Dealer_Ship.Data.Scripts
                             if (cblock as IMyShipConnector != null)
                             {
                                 sData.largeShipConnector = cblock as IMyShipConnector;
+                                sData.largeShipConnector.UpdateTimerTriggered += sData.LargeShipConnector_UpdateTimerTriggered;
                                 //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got large connector");
                             }
                         }
@@ -325,6 +327,8 @@ namespace Dealer_Ship.Data.Scripts
             }
 
         }
+
+
 
         public void GetStations()
         {
@@ -482,6 +486,7 @@ namespace Dealer_Ship.Data.Scripts
         public List<StationData> stations = new List<StationData>();
 
 
+
         public void SetSaveData(KnownStations cstations)
         {
             if(cstations!=null)
@@ -557,6 +562,76 @@ namespace Dealer_Ship.Data.Scripts
         public IMyShipConnector smallShipConnector = null;
         public IMyShipConnector largeShipConnector = null;
         public bool hasBlocks = false;
+
+        public void SmallShipConnector_UpdateTimerTriggered(IMyFunctionalBlock obj)
+        {
+            if(smallShipConnector != null)
+            {
+                if(smallShipConnector.Status == Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
+                {
+                    //MyAPIGateway.Utilities.ShowMessage("DEALER", "SMALL SHIP CONNECTED");
+                    if(shipInfoPanel!=null && smallShipConnector.OtherConnector!=null)
+                    {
+                        
+                        List<IMySlimBlock> blocks = new List<IMySlimBlock>();
+                        IMyCubeGrid grid = smallShipConnector.OtherConnector.Parent as IMyCubeGrid;
+                        if (grid != null)
+                        {
+                            shipInfoPanel.WriteText("Ship Connected: " + grid.CustomName +"\n");
+                            grid.GetBlocks(blocks);
+                            shipInfoPanel.WriteText("Blocks: "+ blocks.Count + "\n", true);
+                            var cargos = grid.GetFatBlocks<IMyCargoContainer>();
+                            shipInfoPanel.WriteText("Cargo: " + cargos.Count() + "\n", true);
+                            var gastanks = grid.GetFatBlocks<IMyGasTank>();
+                            shipInfoPanel.WriteText("Hydrogen Tanks: " + gastanks.Count() + "\n", true);
+                            var batteries = grid.GetFatBlocks<IMyBatteryBlock>();
+                            shipInfoPanel.WriteText("Batteries: " + batteries.Count() + "\n", true);
+                            var reactors = grid.GetFatBlocks<IMyReactor>();
+                            shipInfoPanel.WriteText("Reactors: " + reactors.Count() + "\n", true);
+                            var refinery = grid.GetFatBlocks<IMyRefinery>();
+                            shipInfoPanel.WriteText("Refineries: " + refinery.Count() + "\n", true);
+                            var assemblers = grid.GetFatBlocks<IMyAssembler>();
+                            shipInfoPanel.WriteText("Assemblers: " + assemblers.Count() + "\n", true);
+                        }
+                    }
+                }
+            }
+        }
+
+        public void LargeShipConnector_UpdateTimerTriggered(IMyFunctionalBlock obj)
+        {
+            if (largeShipConnector != null)
+            {
+                if (largeShipConnector.Status == Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
+                {
+                    //MyAPIGateway.Utilities.ShowMessage("DEALER", "SMALL SHIP CONNECTED");
+                    if (shipInfoPanel != null && largeShipConnector.OtherConnector != null)
+                    {
+
+                        List<IMySlimBlock> blocks = new List<IMySlimBlock>();
+                        IMyCubeGrid grid = largeShipConnector.OtherConnector.Parent as IMyCubeGrid;
+                        if (grid != null)
+                        {
+                            shipInfoPanel.WriteText("Ship Connected: " + grid.CustomName + "\n");
+                            grid.GetBlocks(blocks);
+                            shipInfoPanel.WriteText("Blocks: " + blocks.Count + "\n", true);
+                            var cargos = grid.GetFatBlocks<IMyCargoContainer>();
+                            shipInfoPanel.WriteText("Cargo: " + cargos.Count() + "\n", true);
+                            var gastanks = grid.GetFatBlocks<IMyGasTank>();
+                            shipInfoPanel.WriteText("Hydrogen Tanks: " + gastanks.Count() + "\n", true);
+                            var batteries = grid.GetFatBlocks<IMyBatteryBlock>();
+                            shipInfoPanel.WriteText("Batteries: " + batteries.Count() + "\n", true);
+                            var reactors = grid.GetFatBlocks<IMyReactor>();
+                            shipInfoPanel.WriteText("Reactors: " + reactors.Count() + "\n", true);
+                            var refinery = grid.GetFatBlocks<IMyRefinery>();
+                            shipInfoPanel.WriteText("Refineries: " + refinery.Count() + "\n", true);
+                            var assemblers = grid.GetFatBlocks<IMyAssembler>();
+                            shipInfoPanel.WriteText("Assemblers: " + assemblers.Count() + "\n", true);
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
