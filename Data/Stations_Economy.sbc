@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <!-- To add station prefab names add another <PrefabName> inside of category you want to add creating a list.-->
+  <Definition xsi:type="MyObjectBuilder_StationsListDefinition">
+    <Id Type="MyObjectBuilder_StationsListDefinition" Subtype="MiningStations" />
+    <StationNames>
+      <PrefabName>Economy_MiningStation_1</PrefabName>
+      <PrefabName>Economy_MiningStation_2</PrefabName>
+      <PrefabName>Economy_MiningStation_3</PrefabName>
+    </StationNames>
+
+    <SpawnDistance>10000</SpawnDistance>
+
+    <GeneratedItemsContainerType>
+      <TypeId>ContainerTypeDefinition</TypeId>
+      <SubtypeId>StationContainerType</SubtypeId>
+    </GeneratedItemsContainerType>
+
+  </Definition>
+  <Definition xsi:type="MyObjectBuilder_StationsListDefinition">
+    <Id Type="MyObjectBuilder_StationsListDefinition" Subtype="OrbitalStations" />
+    <StationNames>
+      <PrefabName>Economy_OrbitalStation_Dealer_1</PrefabName>
+      <PrefabName>Economy_OrbitalStation_Dealer_2</PrefabName>
+      <PrefabName>Economy_OrbitalStation_Dealer_3</PrefabName>
+      <PrefabName>Economy_OrbitalStation_4</PrefabName>
+      <PrefabName>Economy_OrbitalStation_5</PrefabName>
+      <PrefabName>Economy_OrbitalStation_6</PrefabName>
+      <PrefabName>Economy_OrbitalStation_7</PrefabName>
+    </StationNames>
+
+    <SpawnDistance>20000</SpawnDistance>
+
+    <GeneratedItemsContainerType>
+      <TypeId>ContainerTypeDefinition</TypeId>
+      <SubtypeId>StationContainerType</SubtypeId>
+    </GeneratedItemsContainerType>
+
+  </Definition>
+  <Definition xsi:type="MyObjectBuilder_StationsListDefinition">
+    <Id Type="MyObjectBuilder_StationsListDefinition" Subtype="Outposts" />
+    <StationNames>
+      <PrefabName>Economy_Outpost_1</PrefabName>
+      <PrefabName>Economy_Outpost_2</PrefabName>
+      <PrefabName>Economy_Outpost_3</PrefabName>
+      <PrefabName>Economy_Outpost_4</PrefabName>
+      <PrefabName>Economy_Outpost_5</PrefabName>
+      <PrefabName>Economy_Outpost_6</PrefabName>
+      <PrefabName>Economy_Outpost_7</PrefabName>
+      <PrefabName>Economy_Outpost_8</PrefabName>
+      <PrefabName>Economy_Outpost_9</PrefabName>
+    </StationNames>
+
+    <SpawnDistance>10000</SpawnDistance>
+
+    <GeneratedItemsContainerType>
+      <TypeId>ContainerTypeDefinition</TypeId>
+      <SubtypeId>StationContainerType</SubtypeId>
+    </GeneratedItemsContainerType>
+
+  </Definition>
+  <Definition xsi:type="MyObjectBuilder_StationsListDefinition">
+    <Id Type="MyObjectBuilder_StationsListDefinition" Subtype="SpaceStations" />
+    <StationNames>
+      <PrefabName>Economy_SpaceStation_Dealer_1</PrefabName>
+      <PrefabName>Economy_SpaceStation_Dealer_2</PrefabName>
+      <PrefabName>Economy_SpaceStation_Dealer_3</PrefabName>
+      <PrefabName>Economy_SpaceStation_4</PrefabName>
+      <PrefabName>Economy_SpaceStation_5</PrefabName>
+    </StationNames>
+
+    <SpawnDistance>15000</SpawnDistance>
+
+    <GeneratedItemsContainerType>
+      <TypeId>ContainerTypeDefinition</TypeId>
+      <SubtypeId>StationContainerType</SubtypeId>
+    </GeneratedItemsContainerType>
+
+  </Definition>
+</Definitions>
