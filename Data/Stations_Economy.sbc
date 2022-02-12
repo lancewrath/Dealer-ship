@@ -23,10 +23,10 @@
       <PrefabName>Economy_OrbitalStation_Dealer_1</PrefabName>
       <PrefabName>Economy_OrbitalStation_Dealer_2</PrefabName>
       <PrefabName>Economy_OrbitalStation_Dealer_3</PrefabName>
-      <PrefabName>Economy_OrbitalStation_4</PrefabName>
-      <PrefabName>Economy_OrbitalStation_5</PrefabName>
-      <PrefabName>Economy_OrbitalStation_6</PrefabName>
-      <PrefabName>Economy_OrbitalStation_7</PrefabName>
+      <PrefabName>Economy_OrbitalStation_Dealer_4</PrefabName>
+      <PrefabName>Economy_OrbitalStation_Dealer_5</PrefabName>
+      <PrefabName>Economy_OrbitalStation_Dealer_6</PrefabName>
+      <PrefabName>Economy_OrbitalStation_Dealer_7</PrefabName>
     </StationNames>
 
     <SpawnDistance>20000</SpawnDistance>
@@ -65,8 +65,8 @@
       <PrefabName>Economy_SpaceStation_Dealer_1</PrefabName>
       <PrefabName>Economy_SpaceStation_Dealer_2</PrefabName>
       <PrefabName>Economy_SpaceStation_Dealer_3</PrefabName>
-      <PrefabName>Economy_SpaceStation_4</PrefabName>
-      <PrefabName>Economy_SpaceStation_5</PrefabName>
+      <PrefabName>Economy_SpaceStation_Dealer_4</PrefabName>
+      <PrefabName>Economy_SpaceStation_Dealer_5</PrefabName>
     </StationNames>
 
     <SpawnDistance>15000</SpawnDistance>

@@ -14,9 +14,14 @@ using Sandbox.Game.World.Generator;
 using VRage.ObjectBuilders;
 using Sandbox.Definitions;
 using Sandbox.Game.World;
+using VRageMath;
 
-namespace Dealer_Ship.Data.Scripts
+namespace Razmods.Dealership
 {
+    using Razmods.Dealership.Colors;
+    using Sandbox.Game.SessionComponents.Clipboard;
+    using SpaceEngineers.Game.ModAPI;
+
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
     public class DealerShip : MySessionComponentBase
     {
@@ -28,14 +33,13 @@ namespace Dealer_Ship.Data.Scripts
         KnownStations knownStations = null;
         int STATIONTICK = 600;
         int currenTick = 0;
-
-
+        public ColorHelper colorHelper = new ColorHelper();
 
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             base.Init(sessionComponent);
             bIsServer = MyAPIGateway.Multiplayer.IsServer;
-            
+            colorHelper.ConstructColorMap();
             main = this;
             stations = new StationsData();
             if (!bIsServer)
@@ -73,6 +77,7 @@ namespace Dealer_Ship.Data.Scripts
                     knownStations = MyAPIGateway.Utilities.SerializeFromXML<KnownStations>(data);
                     if(knownStations != null)
                     {
+                        stations.SetSaveData(knownStations);
                         MyLog.Default.WriteLineAndConsole("Station Data Loaded");
                     }
                     
@@ -322,12 +327,39 @@ namespace Dealer_Ship.Data.Scripts
                                 //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got info Panel");
                             }
                         }
+                        else if (cblock.DisplayNameText.Equals("[SHIPLCDLEFT]"))
+                        {
+                            //MyLog.Default.WriteLineAndConsole("DEALERSHIP: FOUND INFO PANEL");
+                            if (cblock as IMyTextPanel != null)
+                            {
+                                sData.shipLeftPanel = cblock as IMyTextPanel;
+                                //sData.shipLeftPanel.SurfaceSize
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got info Panel");
+                            }
+                        }
+                        else if (cblock.DisplayNameText.Equals("[SHIPLCDRIGHT]"))
+                        {
+                            //MyLog.Default.WriteLineAndConsole("DEALERSHIP: FOUND INFO PANEL");
+                            if (cblock as IMyTextPanel != null)
+                            {
+                                sData.shipRightPanel = cblock as IMyTextPanel;
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got info Panel");
+                            }
+                        }
                         else if (cblock.DisplayNameText.Equals("[SHIPVENDOR]"))
                         {
                             //MyLog.Default.WriteLineAndConsole("DEALERSHIP: FOUND TERMINAL");
                             if (cblock as IMyTerminalBlock != null)
                             {
-                                sData.shipSellTerminal = cblock as IMyTerminalBlock;
+                                MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Vendor Panel");
+                                IMyButtonPanel panel = cblock as IMyButtonPanel;
+                                if(panel != null)
+                                {
+                                    MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Button Panel");
+                                    sData.shipSellTerminal = panel;
+                                    sData.shipSellTerminal.ButtonPressed += sData.Panel_ButtonPressed;
+                                    sData.shipSellTerminal.AnyoneCanUse = true;
+                                }
                                 //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got vendor terminal");
                             }
                         }
@@ -487,16 +519,17 @@ namespace Dealer_Ship.Data.Scripts
 
         public int CalculateItemMinimalPrice(MyDefinitionId itemId, float baseCostProductionSpeedMultiplier, int minimalPrice)
         {
-            MyPhysicalItemDefinition definition = null;
-            if (MyDefinitionManager.Static.TryGetDefinition(itemId, out definition) && definition.MinimalPricePerUnit != -1)
+            MyComponentDefinition definition;
+            if (MyDefinitionManager.Static.TryGetDefinition<MyComponentDefinition>(itemId, out definition) && definition.MinimalPricePerUnit != -1)
             {
+                MyAPIGateway.Utilities.ShowMessage("Dealer:", "Min Price: " + definition.MinimalPricePerUnit);
                 minimalPrice += definition.MinimalPricePerUnit;
                 return minimalPrice;
             }
 
-            MyBlueprintDefinitionBase definition2 = null;
+            MyBlueprintDefinitionBase definition2;
             if (!MyDefinitionManager.Static.TryGetBlueprintDefinitionByResultId(itemId, out definition2))
-            {
+            {                
                 return minimalPrice;
             }
             
@@ -556,6 +589,7 @@ namespace Dealer_Ship.Data.Scripts
                     
                     if(station != null)
                     {
+                        station.shipsForSale = kstation.shipsForSale;
                         station.knownstation = kstation;
                     }
                 }
@@ -574,6 +608,7 @@ namespace Dealer_Ship.Data.Scripts
                     station.knownstation.factionID = station.station.FactionId;
                     station.knownstation.stationID = station.station.Id;
                     station.knownstation.entityID = station.station.StationEntityId;
+                    station.knownstation.shipsForSale = station.shipsForSale;
                     cstations.Stations.Add(station.knownstation);
                 } else
                 {
@@ -581,6 +616,7 @@ namespace Dealer_Ship.Data.Scripts
                     station.knownstation.factionID = station.station.FactionId;
                     station.knownstation.stationID = station.station.Id;
                     station.knownstation.entityID = station.station.StationEntityId;
+                    station.knownstation.shipsForSale = station.shipsForSale;
                     cstations.Stations.Add(station.knownstation);
                 }
             }
@@ -603,14 +639,25 @@ namespace Dealer_Ship.Data.Scripts
         public long stationID = 0;
         public long entityID = 0;
         public long factionID = 0;
-
+        public List<ShipForSale> shipsForSale = new List<ShipForSale>();
     }
 
     public class ShipInformation
     {
         public IMyCubeGrid shipGrid = null;
         public int shipPrice = 0;
+        public string shipdetails = "";
+    }
 
+    [System.Serializable]
+    public class ShipForSale
+    {
+        public string shipName = "";
+        public string blueprintName = "";
+        public string shipdetails = "";
+        public int price = 0;
+        public Vector3D position = Vector3D.Zero;
+        public Vector3D orientation = Vector3D.Zero;
     }
 
     public class StationData
@@ -620,58 +667,144 @@ namespace Dealer_Ship.Data.Scripts
         public bool isActive = false;
         public KnownStation knownstation = null;
         public IMyTextPanel shipInfoPanel = null;
-        public IMyTerminalBlock shipSellTerminal = null;
+        public IMyTextPanel shipLeftPanel = null;
+        public IMyTextPanel shipRightPanel = null;
+        public IMyButtonPanel shipSellTerminal = null;
         public IMyShipConnector smallShipConnector = null;
         public IMyShipConnector largeShipConnector = null;
+        public IMyProjector largeProjector = null;
+        public IMyProjector smallProjector = null;
+
         public bool hasBlocks = false;
         ShipInformation shipInfo = null;
-        
+        public List<ShipForSale> shipsForSale = new List<ShipForSale> ();
+        public void Sell_The_Ship()
+        {
+            if(shipInfo!=null)
+            {
+                if(shipInfo.shipGrid!=null)
+                {
+
+                    if(shipInfo.shipGrid.BigOwners.Count>0)
+                    {
+
+                        long owner = shipInfo.shipGrid.BigOwners[0];
+                        List<IMyPlayer> players = new List<IMyPlayer>();
+                        MyAPIGateway.Players.GetPlayers(players);
+
+                        IMyPlayer mainOwner = players.Find(p => p.IdentityId == owner);
+
+                        if(mainOwner != null)
+                        {
+                            Random random = new Random();
+                            string blueprintName = shipInfo.shipGrid.CustomName + "_" + mainOwner.IdentityId + "_" + random.Next();
+                            MyVisualScriptLogicProvider.CreateLocalBlueprint(shipInfo.shipGrid.Name, blueprintName, shipInfo.shipGrid.CustomName);
+
+                            ShipForSale sale = new ShipForSale();
+                            sale.shipName = shipInfo.shipGrid.DisplayName;
+                            sale.position = shipInfo.shipGrid.PositionComp.GetPosition();
+                            sale.orientation = shipInfo.shipGrid.PositionComp.GetOrientation().Forward + shipInfo.shipGrid.PositionComp.GetOrientation().Up;
+                            sale.blueprintName = blueprintName;
+                            sale.price = shipInfo.shipPrice;
+                            sale.shipdetails = shipInfo.shipdetails;
+                            shipsForSale.Add(sale);
+                            mainOwner.RequestChangeBalance(shipInfo.shipPrice);
+                            MyVisualScriptLogicProvider.ShowNotification("Sold " + shipInfo.shipGrid.CustomName + " for $" + shipInfo.shipPrice, 5000, "Green", mainOwner.IdentityId);
+                            shipInfo.shipGrid.Close();
+                            shipInfo = null;
+                            
+                        }
+
+                        //MyVisualScriptLogicProvider.CreateLocalBlueprint()
+                    }
+
+
+
+                }
+            }
+        }
+
+        public void Panel_ButtonPressed(int button)
+        {
+            MyAPIGateway.Utilities.ShowMessage("Dealer", "Button " + button + " pressed!");
+            if (shipSellTerminal != null)
+            {
+                
+                switch (button)
+                {
+                    case 0:
+                        break;
+                    case 1:
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        Sell_The_Ship();
+                        break;
+
+                }
+            }
+        }
+
         void SetShipInfo(IMyCubeGrid grid)
         {
             shipInfo = new ShipInformation();
             shipInfo.shipGrid = grid;
 
-
             if (shipInfo.shipGrid != null)
             {
                 shipInfoPanel.WriteText("Ship Connected: " + shipInfo.shipGrid.CustomName + "\n");
                 var blocks = shipInfo.shipGrid.GetFatBlocks<IMyCubeBlock>();
-
-
+                
                 int calculatedprice = 0;
+                List<MyObjectBuilder_CubeGrid> shipgrids = new List<MyObjectBuilder_CubeGrid>();
+                shipgrids.Add(shipInfo.shipGrid.GetObjectBuilder(true) as MyObjectBuilder_CubeGrid);
+
+
+
+                //calculatedprice += DealerShip.main.CalculateItemMinimalPrice(myObjectBuilder_ShipBlueprintDefinition.Id, 1, 0);
+
 
                 foreach (var block in blocks)
                 {
-                    var cbobj = block.GetObjectBuilderCubeBlock();
-                    if (cbobj != null)
-                    {
-                        var constructionInv = cbobj.ConstructionInventory;
-                        if (constructionInv != null)
-                        {
-                            foreach (var item in constructionInv.Items)
-                            {
-                                calculatedprice += DealerShip.main.CalculateItemMinimalPrice(new MyDefinitionId(item.TypeId), 1, 0);
+                    var blockobj = block.GetObjectBuilderCubeBlock();
 
-                            }
-                        }
+                    MyCubeBlockDefinition blockdef = MyDefinitionManager.Static.GetCubeBlockDefinition(block.BlockDefinition);
+                   
+                    if (blockdef != null)
+                    {
+                        calculatedprice += blockdef.PCU*10;
+
                     }
+
+
+
                 }
+
+
                 shipInfo.shipPrice = calculatedprice;
+                shipInfo.shipdetails = "";
                 shipInfoPanel.WriteText("Sell: $" + (int)(shipInfo.shipPrice*0.85) + "\n", true);
                 shipInfoPanel.WriteText("Blocks: " + blocks.Count() + "\n", true);
+                shipInfo.shipdetails += "Blocks: " + blocks.Count() + "\n";
                 var cargos = shipInfo.shipGrid.GetFatBlocks<IMyCargoContainer>();
                 shipInfoPanel.WriteText("Cargo: " + cargos.Count() + "\n", true);
+                shipInfo.shipdetails += "Cargo: " + cargos.Count() + "\n";
                 var gastanks = shipInfo.shipGrid.GetFatBlocks<IMyGasTank>();
                 shipInfoPanel.WriteText("Hydrogen Tanks: " + gastanks.Count() + "\n", true);
+                shipInfo.shipdetails += "Hydrogen Tanks: " + gastanks.Count() + "\n";
                 var batteries = shipInfo.shipGrid.GetFatBlocks<IMyBatteryBlock>();
                 shipInfoPanel.WriteText("Batteries: " + batteries.Count() + "\n", true);
+                shipInfo.shipdetails += "Batteries: " + batteries.Count() + "\n";
                 var reactors = shipInfo.shipGrid.GetFatBlocks<IMyReactor>();
                 shipInfoPanel.WriteText("Reactors: " + reactors.Count() + "\n", true);
+                shipInfo.shipdetails += "Reactors: " + reactors.Count() + "\n";
                 var refinery = shipInfo.shipGrid.GetFatBlocks<IMyRefinery>();
                 shipInfoPanel.WriteText("Refineries: " + refinery.Count() + "\n", true);
+                shipInfo.shipdetails += "Refineries: " + refinery.Count() + "\n";
                 var assemblers = shipInfo.shipGrid.GetFatBlocks<IMyAssembler>();
                 shipInfoPanel.WriteText("Assemblers: " + assemblers.Count() + "\n", true);
-
+                shipInfo.shipdetails += "Assemblers: " + assemblers.Count() + "\n";
 
 
 
@@ -697,6 +830,10 @@ namespace Dealer_Ship.Data.Scripts
                 if (largeShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected && smallShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
                 {
                     shipInfo = null;
+                    if(shipInfoPanel != null)
+                    {
+                        shipInfoPanel.WriteText("No Ship:");
+                    }
                 }
             }
         }
@@ -720,6 +857,10 @@ namespace Dealer_Ship.Data.Scripts
                 if (largeShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected && smallShipConnector.Status != Sandbox.ModAPI.Ingame.MyShipConnectorStatus.Connected)
                 {
                     shipInfo = null;
+                    if (shipInfoPanel != null)
+                    {
+                        shipInfoPanel.WriteText("No Ship:");
+                    }
                 }
             }
         }

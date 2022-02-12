@@ -124,9 +124,15 @@
     <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_1.sbc" />
     <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_2.sbc" />
     <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_3.sbc" />
+    <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_4.sbc" />
+    <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_5.sbc" />
+    <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_6.sbc" />
+    <None Include="Data\Prefabs\Economy_OrbitalStation_Dealer_7.sbc" />
     <None Include="Data\Prefabs\Economy_SpaceStation_Dealer_1.sbc" />
     <None Include="Data\Prefabs\Economy_SpaceStation_Dealer_2.sbc" />
     <None Include="Data\Prefabs\Economy_SpaceStation_Dealer_3.sbc" />
+    <None Include="Data\Prefabs\Economy_SpaceStation_Dealer_4.sbc" />
+    <None Include="Data\Prefabs\Economy_SpaceStation_Dealer_5.sbc" />
     <None Include="Data\Stations_Economy.sbc" />
     <None Include="README.md" />
   </ItemGroup>
@@ -135,7 +141,8 @@
     <Folder Include=".git\refs\tags\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\Scripts\DealerShip.cs" />
+    <Compile Include="Data\Scripts\DealerShip\Color3\Color3.cs" />
+    <Compile Include="Data\Scripts\DealerShip\Core\DealerShip.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSHARP.Targets" />
   <ProjectExtensions>
