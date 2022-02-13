@@ -2,7 +2,7 @@
 <Definitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Prefabs>
     <Prefab xsi:type="MyObjectBuilder_PrefabDefinition">
-      <Id Type="MyObjectBuilder_PrefabDefinition" Subtype="Economy_OrbitalStation_2" />
+      <Id Type="MyObjectBuilder_PrefabDefinition" Subtype="Economy_OrbitalStation_Dealer_2" />
       <CubeGrids>
         <CubeGrid>
           <SubtypeName />
@@ -18647,69 +18647,6 @@
               </StartingPosition>
             </OxygenRoom>
           </OxygenRooms>
-        </CubeGrid>
-        <CubeGrid>
-          <SubtypeName />
-          <EntityId>79202436250894829</EntityId>
-          <PersistentFlags>CastShadows InScene</PersistentFlags>
-          <Name>79202436250894829</Name>
-          <PositionAndOrientation>
-            <Position x="75.0001335144043" y="-0.39598369598388672" z="0.01784515380859375" />
-            <Forward x="1" y="0.0003317548" z="0.0002378431" />
-            <Up x="0.0003317441" y="-1.00000012" z="4.503636E-05" />
-            <Orientation>
-              <X>0.7071909</X>
-              <Y>0.000101382328</Y>
-              <Z>-0.707022667</Z>
-              <W>0.000133199937</W>
-            </Orientation>
-          </PositionAndOrientation>
-          <LocalPositionAndOrientation xsi:nil="true" />
-          <GridSizeEnum>Small</GridSizeEnum>
-          <CubeBlocks>
-            <MyObjectBuilder_CubeBlock xsi:type="MyObjectBuilder_MotorRotor">
-              <SubtypeName>SmallRotor</SubtypeName>
-              <EntityId>112676464615609622</EntityId>
-              <ParentEntityId>123403511914975341</ParentEntityId>
-              <YieldLastComponent>false</YieldLastComponent>
-            </MyObjectBuilder_CubeBlock>
-            <MyObjectBuilder_CubeBlock xsi:type="MyObjectBuilder_Projector">
-              <SubtypeName>SmallProjector</SubtypeName>
-              <EntityId>135039507815889957</EntityId>
-              <Min x="0" y="1" z="0" />
-              <CustomName>[SHIPSMALLPROJECTOR]</CustomName>
-              <ShowOnHUD>false</ShowOnHUD>
-              <ShowInTerminal>true</ShowInTerminal>
-              <ShowInToolbarConfig>true</ShowInToolbarConfig>
-              <ShowInInventory>true</ShowInInventory>
-              <Enabled>true</Enabled>
-              <ProjectionOffset>
-                <X>0</X>
-                <Y>0</Y>
-                <Z>0</Z>
-              </ProjectionOffset>
-              <ProjectionRotation>
-                <X>0</X>
-                <Y>0</Y>
-                <Z>0</Z>
-              </ProjectionRotation>
-              <KeepProjection>false</KeepProjection>
-              <ShowOnlyBuildable>false</ShowOnlyBuildable>
-              <InstantBuildingEnabled>false</InstantBuildingEnabled>
-              <MaxNumberOfProjections>5</MaxNumberOfProjections>
-              <MaxNumberOfBlocks>200</MaxNumberOfBlocks>
-              <ProjectionsRemaining>0</ProjectionsRemaining>
-              <GetOwnershipFromProjector>false</GetOwnershipFromProjector>
-              <Scale>1</Scale>
-            </MyObjectBuilder_CubeBlock>
-          </CubeBlocks>
-          <DisplayName>Small Grid 3688</DisplayName>
-          <DestructibleBlocks>true</DestructibleBlocks>
-          <CreatePhysics>false</CreatePhysics>
-          <EnableSmallToLargeConnections>false</EnableSmallToLargeConnections>
-          <IsRespawnGrid>false</IsRespawnGrid>
-          <LocalCoordSys>0</LocalCoordSys>
-          <TargetingTargets />
         </CubeGrid>
       </CubeGrids>
       <EnvironmentType>None</EnvironmentType>

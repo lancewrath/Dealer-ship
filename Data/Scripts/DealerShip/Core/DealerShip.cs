@@ -18,7 +18,9 @@ using VRageMath;
 
 namespace Razmods.Dealership
 {
+    using Entities.Blocks;
     using Razmods.Dealership.Colors;
+    using Sandbox.Game.Entities;
     using Sandbox.Game.SessionComponents.Clipboard;
     using SpaceEngineers.Game.ModAPI;
 
@@ -34,7 +36,7 @@ namespace Razmods.Dealership
         int STATIONTICK = 600;
         int currenTick = 0;
         public ColorHelper colorHelper = new ColorHelper();
-
+        bool dataLoaded = false;
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             base.Init(sessionComponent);
@@ -50,6 +52,8 @@ namespace Razmods.Dealership
 
             if (!bInitialized)
             {
+
+
                 Setup();
                 SetCallbacks();
                 bInitialized = true;
@@ -68,21 +72,27 @@ namespace Razmods.Dealership
         public override void LoadData()
         {
             base.LoadData();
-            if (MyAPIGateway.Utilities.FileExistsInWorldStorage(stationDataFile, typeof(KnownStations)))
+            MyLog.Default.WriteLineAndConsole("Station Data Loading....");
+            if (MyAPIGateway.Utilities.FileExistsInWorldStorage(stationDataFile, typeof(string)))
             {
-                var reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(stationDataFile, typeof(KnownStations));
+                var reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(stationDataFile, typeof(string));
                 if (reader != null)
                 {
                     string data = reader.ReadToEnd();
                     knownStations = MyAPIGateway.Utilities.SerializeFromXML<KnownStations>(data);
-                    if(knownStations != null)
+                    if (knownStations != null)
                     {
-                        stations.SetSaveData(knownStations);
                         MyLog.Default.WriteLineAndConsole("Station Data Loaded");
                     }
-                    
-
+                    else
+                    {
+                        MyLog.Default.WriteLineAndConsole("Station Data Was NULL");
+                    }
                 }
+            }
+            else
+            {
+                MyLog.Default.WriteLineAndConsole("Station Data Reader Null");
             }
         }
 
@@ -103,42 +113,8 @@ namespace Razmods.Dealership
         public void Setup()
         {
             GetStations();
-            //HashSet<IMyEntity> entities = new HashSet<IMyEntity>();
-            //MyAPIGateway.Entities.GetEntities(entities);
 
-            foreach (StationData station in stations.stations)
-            {
-                //add callbacks
-                if (station.station.StationEntityId!=0)
-                {
-                    
-                    if (station.stationGrid != null)
-                    {
-                        //MyAPIGateway.Utilities.ShowMessage("Dealer", "Station Grid: " + station.stationGrid.DisplayName);
-                        station.stationGrid.OnClosing += StationGrid_OnClosing;
-                        station.stationGrid.PlayerPresenceTierChanged += StationGrid_PlayerPresenceTierChanged;
-                        station.isActive = true;
-                        //GetStationShipSellBlocks(station);
-                    } else
-                    {
-                        //try to get station grid
-                        VRage.ModAPI.IMyEntity ent = MyAPIGateway.Entities.GetEntityById(station.station.StationEntityId);
-                        if(ent!=null)
-                        {
-                            if (ent as IMyCubeGrid != null)
-                            {
-                                station.stationGrid = ent as IMyCubeGrid;
-                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Station Grid: " + station.stationGrid.DisplayName);
-                                station.stationGrid.OnClosing += StationGrid_OnClosing;
-                                station.stationGrid.PlayerPresenceTierChanged += StationGrid_PlayerPresenceTierChanged;
-                                station.isActive = true;
-                            }
-                        }
-                    }
-                    
-                    //
-                }
-            }
+
 
         }
 
@@ -160,12 +136,73 @@ namespace Razmods.Dealership
             currenTick++;
             if (currenTick >= STATIONTICK)
             {
+
+                if (!dataLoaded)
+                {
+                    foreach (StationData station in stations.stations)
+                    {
+                        MyLog.Default.WriteLineAndConsole("Station....");
+                        MyLog.Default.WriteLineAndConsole("Station Data: " + station.station.Id);
+                        if (knownStations != null)
+                        {
+                            MyLog.Default.WriteLineAndConsole("Try add Station Data for " + station.station.PrefabName);
+                            KnownStation ks = knownStations.Stations.Find(s => s.stationID == station.station.Id);
+                            if (ks != null)
+                            {
+                                MyLog.Default.WriteLineAndConsole("Station Data added - Ships for Sale: " + ks.shipsForSale.Count);
+                                station.shipsForSale = ks.shipsForSale;
+                                station.knownstation = ks;
+                            }
+                        }
+                        else
+                        {
+                            MyLog.Default.WriteLineAndConsole("No Saved Station Data ");
+                        }
+
+                        //add callbacks
+                        if (station.station.StationEntityId != 0)
+                        {
+
+                            if (station.stationGrid != null)
+                            {
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Station Grid: " + station.stationGrid.DisplayName);
+                                station.stationGrid.OnClosing += StationGrid_OnClosing;
+                                station.stationGrid.PlayerPresenceTierChanged += StationGrid_PlayerPresenceTierChanged;
+                                station.isActive = true;
+                                //GetStationShipSellBlocks(station);
+                            }
+                            else
+                            {
+                                //try to get station grid
+                                VRage.ModAPI.IMyEntity ent = MyAPIGateway.Entities.GetEntityById(station.station.StationEntityId);
+                                if (ent != null)
+                                {
+                                    if (ent as IMyCubeGrid != null)
+                                    {
+                                        station.stationGrid = ent as IMyCubeGrid;
+                                        //MyAPIGateway.Utilities.ShowMessage("Dealer", "Station Grid: " + station.stationGrid.DisplayName);
+                                        station.stationGrid.OnClosing += StationGrid_OnClosing;
+                                        station.stationGrid.PlayerPresenceTierChanged += StationGrid_PlayerPresenceTierChanged;
+                                        station.isActive = true;
+                                    }
+                                }
+                            }
+
+                            //
+                        }
+                    }
+
+
+
+                    dataLoaded = true;
+                }
+
                 List<StationData> activeStations = stations.stations.FindAll(s => s.isActive && s.station.StationEntityId!=0);
                 if (activeStations != null)
                 {
                     foreach (StationData station in activeStations)
                     {
-                        if (station.isActive && !station.hasBlocks)
+                        if (!station.hasBlocks)
                         {
                             if (station.stationGrid != null)
                             {
@@ -179,6 +216,7 @@ namespace Razmods.Dealership
                                 }
                             }
                         }
+                        station.Update();
                     }
                 }
                 currenTick = 0;
@@ -219,6 +257,12 @@ namespace Razmods.Dealership
             {
                 IMyCubeGrid ent = obj as IMyCubeGrid;
                 ent.PlayerPresenceTierChanged -= StationGrid_PlayerPresenceTierChanged;
+                StationData sData = stations.stations.Find(s => s.station.StationEntityId == obj.EntityId);
+                if(sData != null)
+                {
+                    if (sData.previewShip != null)
+                        sData.previewShip.Close();
+                }
             }
 
             obj.OnClosing -= StationGrid_OnClosing;
@@ -247,19 +291,28 @@ namespace Razmods.Dealership
                     TryGetStation(grid, out station);
                     if (station != null)
                     {
-                        //MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Station: " + station.PrefabName);
-                        StationData sData = new StationData();
-                        sData.station = station;
-                        sData.stationGrid = grid;
-                        sData.stationGrid.OnClosing += StationGrid_OnClosing;
-                        sData.stationGrid.PlayerPresenceTierChanged += StationGrid_PlayerPresenceTierChanged;
-                        if(sData.stationGrid!=null)
+                        StationData sData = stations.stations.Find(s => s.station.Id == station.Id);
+                        if(sData == null)
                         {
-                            //MyAPIGateway.Utilities.ShowMessage("Dealer", "Station not null: " + sData.stationGrid.DisplayName);
-                            sData.isActive = true;
-                            GetStationShipSellBlocks(sData);
+                            sData = new StationData();
+                            stations.stations.Add(sData);
                         }
-                        stations.stations.Add(sData);
+                        //MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Station: " + station.PrefabName);
+                        
+                        sData.station = station;
+                        if (sData.stationGrid == null)
+                        {
+                            sData.stationGrid = grid;
+                            sData.stationGrid.OnClosing += StationGrid_OnClosing;
+                            sData.stationGrid.PlayerPresenceTierChanged += StationGrid_PlayerPresenceTierChanged;
+                            if (sData.stationGrid != null)
+                            {
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Station not null: " + sData.stationGrid.DisplayName);
+                                sData.isActive = true;
+                                GetStationShipSellBlocks(sData);
+                            }
+                        }
+                        
                     }
                 }
             }
@@ -333,8 +386,9 @@ namespace Razmods.Dealership
                             if (cblock as IMyTextPanel != null)
                             {
                                 sData.shipLeftPanel = cblock as IMyTextPanel;
+                                sData.shipLeftPanel.UpdateTimerTriggered += sData.ShipLeftPanel_UpdateTimerTriggered;
                                 //sData.shipLeftPanel.SurfaceSize
-                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got info Panel");
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got left info Panel");
                             }
                         }
                         else if (cblock.DisplayNameText.Equals("[SHIPLCDRIGHT]"))
@@ -343,7 +397,9 @@ namespace Razmods.Dealership
                             if (cblock as IMyTextPanel != null)
                             {
                                 sData.shipRightPanel = cblock as IMyTextPanel;
-                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got info Panel");
+                                
+                                sData.shipRightPanel.UpdateTimerTriggered += sData.ShipRightPanel_UpdateTimerTriggered;
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got right info Panel");
                             }
                         }
                         else if (cblock.DisplayNameText.Equals("[SHIPVENDOR]"))
@@ -351,14 +407,15 @@ namespace Razmods.Dealership
                             //MyLog.Default.WriteLineAndConsole("DEALERSHIP: FOUND TERMINAL");
                             if (cblock as IMyTerminalBlock != null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Vendor Panel");
+                                //MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Vendor Panel");
                                 IMyButtonPanel panel = cblock as IMyButtonPanel;
                                 if(panel != null)
                                 {
-                                    MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Button Panel");
+                                    //MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Button Panel");
                                     sData.shipSellTerminal = panel;
                                     sData.shipSellTerminal.ButtonPressed += sData.Panel_ButtonPressed;
                                     sData.shipSellTerminal.AnyoneCanUse = true;
+                                    
                                 }
                                 //MyAPIGateway.Utilities.ShowMessage("Dealer", "Got vendor terminal");
                             }
@@ -378,6 +435,7 @@ namespace Razmods.Dealership
             {
                 StationData sData = new StationData();
                 sData.station = stationobj;
+
                 IMyEntity ent;
                 if (MyAPIGateway.Entities.TryGetEntityById(sData.station.StationEntityId, out ent))
                 {
@@ -387,16 +445,13 @@ namespace Razmods.Dealership
                         {
                             
                             sData.stationGrid = ent as IMyCubeGrid;
-                            MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Station Grid: " + sData.stationGrid);
+                            //MyAPIGateway.Utilities.ShowMessage("Dealer", "Found Station Grid: " + sData.stationGrid);
                         }
                     }
                 }
                 stations.stations.Add(sData);
             }
-            if (knownStations != null)
-            {
-                stations.SetSaveData(knownStations);
-            }
+
 
         }
 
@@ -581,17 +636,20 @@ namespace Razmods.Dealership
             {
                 foreach (KnownStation kstation in cstations.Stations)
                 {
-                    StationData station = null;
-                    try
+                    MyLog.Default.WriteLineAndConsole("Check Station: " + kstation.stationID);
+                    foreach (var s in stations)
                     {
-                        station = stations.Find(s => s.station.StationEntityId == kstation.entityID);
-                    } catch { }
-                    
-                    if(station != null)
-                    {
-                        station.shipsForSale = kstation.shipsForSale;
-                        station.knownstation = kstation;
-                    }
+
+                        
+
+                        if (s.station.Id == kstation.stationID)
+                        {
+                            MyLog.Default.WriteLineAndConsole("Station: " + s.station.PrefabName + " Data Loaded.");
+                            MyLog.Default.WriteLineAndConsole("Station: Has " + kstation.shipsForSale.Count + " ships for sale.");
+                            s.shipsForSale = kstation.shipsForSale;
+                            s.knownstation = kstation;
+                        }
+                    }                
                 }
             }
         }
@@ -662,6 +720,30 @@ namespace Razmods.Dealership
 
     public class StationData
     {
+
+        public StationData()
+        {
+            leftScreenmessages.Add(
+                "BUY/SELL\n" +
+                "SHIPS\n" +
+                "HERE!");
+
+            leftScreenmessages.Add(
+                "BEST DEALS\n" +
+                "IN THIS\n" +
+                "SECTOR!");
+
+            leftScreenmessages.Add(
+                "SEE OUR\n" +
+                "SELECTION\n" +
+                "OF SHIPS!");
+
+            leftScreenmessages.Add(
+                "OVER 250,000\n" +
+                "HAPPY BUYERS\n" +
+                "& COUNTING!");
+        }
+
         public MyObjectBuilder_Station station = null;
         public IMyCubeGrid stationGrid = null;
         public bool isActive = false;
@@ -674,10 +756,95 @@ namespace Razmods.Dealership
         public IMyShipConnector largeShipConnector = null;
         public IMyProjector largeProjector = null;
         public IMyProjector smallProjector = null;
-
+        public IMyCubeGrid previewShip = null;
         public bool hasBlocks = false;
         ShipInformation shipInfo = null;
-        public List<ShipForSale> shipsForSale = new List<ShipForSale> ();
+        int currentShip = 0;
+        public List<ShipForSale> shipsForSale = new List<ShipForSale>();
+        int currentLeftMessage = 0;
+        int currentRightMessage = 0;
+        int despawntime = 0;
+        bool pressedNav = false;
+        List<string> leftScreenmessages = new List<string>();
+
+        public void Update()
+        {
+            ShipRightPanel_UpdateTimerTriggered(null);
+            ShipLeftPanel_UpdateTimerTriggered(null);
+            pressedNav = false;
+            despawntime++;
+            if(despawntime==20)
+            {
+                if(previewShip != null)
+                {
+                    previewShip.Close();
+                }
+                despawntime = 0;
+            }
+        }
+
+        public void ShipRightPanel_UpdateTimerTriggered(IMyFunctionalBlock obj)
+        {
+            //MyAPIGateway.Utilities.ShowMessage("LCD", "RIGHT TICK");
+
+            if (currentRightMessage < shipsForSale.Count)
+            {
+                if (shipRightPanel != null)
+                {
+                    if(previewShip != null)
+                    {
+                        shipRightPanel.WriteText("Ship For Sale #" + (currentShip + 1) + " \n " + shipsForSale[currentShip].shipName + "\n ONLY $" + shipsForSale[currentShip].price + "!! \n \n" + shipsForSale[currentShip].shipdetails);
+
+                    }
+                    else 
+                    { 
+                        if (shipsForSale.Count > 0)
+                        {
+                            shipRightPanel.WriteText("Ship For Sale #" + (currentRightMessage + 1) + " \n "+ shipsForSale[currentRightMessage].shipName+ "\n ONLY $"+ shipsForSale[currentRightMessage].price+ "!! \n \n" + shipsForSale[currentRightMessage].shipdetails);
+                            currentRightMessage++;
+                            if (currentRightMessage >= shipsForSale.Count)
+                            {
+                                currentRightMessage = 0;
+                            }
+                        } else
+                        {
+                            shipRightPanel.WriteText("WE BUY SHIPS!");
+                        }
+                    }
+                }
+            }
+
+
+        }
+
+        public void ShipLeftPanel_UpdateTimerTriggered(IMyFunctionalBlock obj)
+        {
+            //MyAPIGateway.Utilities.ShowMessage("LCD", "LEFT TICK");
+
+            if(currentLeftMessage< leftScreenmessages.Count)
+            {
+                if(shipLeftPanel!=null)
+                {
+                    if (previewShip != null)
+                    {
+                        shipLeftPanel.WriteText("DEMO SHIP\nWILL DESPAWN\nIN 2 MINS");
+                    }
+                    else
+                    {                   
+                        shipLeftPanel.WriteText(leftScreenmessages[currentLeftMessage]);
+                        currentLeftMessage++;
+                        if (currentLeftMessage >= leftScreenmessages.Count)
+                        {
+                            currentLeftMessage = 0;
+                        }
+                    }
+                }
+            }
+                
+            
+
+        }
+
         public void Sell_The_Ship()
         {
             if(shipInfo!=null)
@@ -698,7 +865,14 @@ namespace Razmods.Dealership
                         {
                             Random random = new Random();
                             string blueprintName = shipInfo.shipGrid.CustomName + "_" + mainOwner.IdentityId + "_" + random.Next();
-                            MyVisualScriptLogicProvider.CreateLocalBlueprint(shipInfo.shipGrid.Name, blueprintName, shipInfo.shipGrid.CustomName);
+
+                            var ship = shipInfo.shipGrid.GetObjectBuilder();
+                            string shipData = MyAPIGateway.Utilities.SerializeToXML(ship);
+                            TextWriter tw = MyAPIGateway.Utilities.WriteFileInWorldStorage(blueprintName+".sbc", typeof(string));
+                            tw.Write(shipData);
+                            tw.Close();
+                            MyLog.Default.WriteLineAndConsole("Ship Data Saved");
+                            //MyVisualScriptLogicProvider.CreateLocalBlueprint(shipInfo.shipGrid.Name, blueprintName, shipInfo.shipGrid.CustomName);
 
                             ShipForSale sale = new ShipForSale();
                             sale.shipName = shipInfo.shipGrid.DisplayName;
@@ -724,25 +898,207 @@ namespace Razmods.Dealership
             }
         }
 
+        public void Buy_The_Ship()
+        {
+            BoundingSphereD sphere = new BoundingSphereD(shipSellTerminal.GetPosition(), 10.0);
+            List<IMyEntity> ents = MyAPIGateway.Entities.GetTopMostEntitiesInSphere(ref sphere);
+            if(ents!=null)
+            {
+                foreach(IMyEntity ent in ents)
+                {
+                    
+                    if(ent as IMyCharacter != null)
+                    {
+                        IMyCharacter character = ent as IMyCharacter;
+                        if(character != null)
+                        {
+                            List<IMyPlayer> players = new List<IMyPlayer>();
+                            MyAPIGateway.Players.GetPlayers(players);
+                            IMyPlayer player = players.Find(p => p.Character.EntityId == character.EntityId);
+                            if(player != null)
+                            {
+                                long balance = 0;
+                                if(player.TryGetBalanceInfo(out balance))
+                                {
+                                    if(balance >= shipsForSale[currentShip].price)
+                                    {
+                                        previewShip.Close();
+                                        previewShip = null;
+                                        MyAPIGateway.Utilities.ShowMessage("Dealer", "Remove Preview");
+                                        if (MyAPIGateway.Utilities.FileExistsInWorldStorage(shipsForSale[currentShip].blueprintName + ".sbc", typeof(string)))
+                                        {
+                                            var reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(shipsForSale[currentShip].blueprintName + ".sbc", typeof(string));
+                                            if (reader != null)
+                                            {
+                                                string data = reader.ReadToEnd();
+
+                                                MyObjectBuilder_CubeGrid gridBuilder = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_CubeGrid>(data);
+                                                if (gridBuilder != null)
+                                                {
+                                                    MyAPIGateway.Entities.RemapObjectBuilder(gridBuilder);
+                                                    MyAPIGateway.Utilities.ShowMessage("Dealer", "Generate ship");
+                                                    IMyEntity shent = MyAPIGateway.Entities.CreateFromObjectBuilder(gridBuilder);
+                                                    MyAPIGateway.Utilities.ShowMessage("Dealer", "Created Ship");
+                                                    if (shent as IMyCubeGrid != null)
+                                                    {
+                                                        IMyCubeGrid grid = shent as IMyCubeGrid;
+                                                        //grid.IsStatic = true;
+                                                        //grid.Physics.Flags = RigidBodyFlag.RBF_STATIC;
+                                                        grid.Physics.Deactivate();
+                                                        grid.UpdateOwnership(0, false);
+                                                        MyAPIGateway.Entities.AddEntity(grid, true);
+
+                                                        MyAPIGateway.Utilities.ShowMessage("Dealer", "Ship is Spawned");
+
+                                                        player.RequestChangeBalance(-shipsForSale[currentShip].price);
+                                                        MyVisualScriptLogicProvider.ShowNotification("Purchased " + shipsForSale[currentShip].shipName + " for $" + shipsForSale[currentShip].price+"!", 5000, "Green", player.IdentityId);
+                                                        MyAPIGateway.Utilities.ShowMessage("Dealer", "Ship Ownership Changed");
+                                                        grid.ChangeGridOwnership(player.IdentityId, MyOwnershipShareModeEnum.Faction);
+                                                        return;
+                                                    
+                                                    }
+                                                }
+
+                                            }
+                                        }
+
+                                    } else
+                                    {
+                                        MyVisualScriptLogicProvider.ShowNotification("Do Not have enough Money to purchase " + shipsForSale[currentShip].shipName + "!", 5000, "Red", player.IdentityId);
+
+                                    }
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void Panel_ButtonPressed(int button)
         {
             MyAPIGateway.Utilities.ShowMessage("Dealer", "Button " + button + " pressed!");
-            if (shipSellTerminal != null)
+            if (shipSellTerminal != null && !pressedNav)
             {
                 
                 switch (button)
                 {
                     case 0:
+                        currentShip--;
+                        if (currentShip < 0)
+                            currentShip = shipsForSale.Count-1;
+                        Preview_Ship();
                         break;
                     case 1:
+                        currentShip++;
+                        if (currentShip > shipsForSale.Count-1)
+                            currentShip = 0;
+
+                        Preview_Ship();
                         break;
                     case 2:
+                            Buy_The_Ship();
+                        
                         break;
                     case 3:
-                        Sell_The_Ship();
+                        if(previewShip==null)
+                            Sell_The_Ship();
                         break;
 
                 }
+                pressedNav = true;
+            }
+        }
+
+        private void Preview_Ship()
+        {
+            if(previewShip!=null)
+            {
+                previewShip.Close();
+            }
+            previewShip = null;
+            if (currentShip > shipsForSale.Count - 1 || currentShip < 0)
+                return;
+            if (MyAPIGateway.Utilities.FileExistsInWorldStorage(shipsForSale[currentShip].blueprintName+".sbc", typeof(string)))
+            {
+                var reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(shipsForSale[currentShip].blueprintName + ".sbc", typeof(string));
+                if (reader != null)
+                {
+                    string data = reader.ReadToEnd();
+                    
+                    MyObjectBuilder_CubeGrid gridBuilder = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_CubeGrid>(data);
+                    if (gridBuilder != null)
+                    {
+                        IMyEntity ent = MyAPIGateway.Entities.CreateFromObjectBuilder(gridBuilder);
+                        
+                        if (ent as IMyCubeGrid != null)
+                        {
+                            
+                            previewShip = ent as IMyCubeGrid;
+                            previewShip.IsRespawnGrid = true;
+
+                            previewShip.Render.Transparency = 0.1f;
+                            previewShip.Transparent = true;
+                            previewShip.IsStatic = true;
+                            previewShip.Physics.Flags = RigidBodyFlag.RBF_STATIC;
+                            previewShip.Physics.Deactivate();
+                            previewShip.UpdateOwnership(0, false);
+                            previewShip.OnClosing += PreviewShip_OnClosing;
+                            previewShip.OnGridChanged += PreviewShip_OnGridChanged;
+                            previewShip.OnIsStaticChanged += PreviewShip_OnIsStaticChanged;
+                            
+                            MyAPIGateway.Entities.AddEntity(previewShip,true);
+
+                            despawntime = 0;
+                        }
+                    }
+
+                }
+            }
+            
+        }
+
+        private void PreviewShip_OnIsStaticChanged(IMyCubeGrid arg1, bool arg2)
+        {
+            previewShip.IsStatic = true;
+        }
+
+        private void PreviewShip_OnClosing(IMyEntity obj)
+        {
+            if(obj as IMyCubeGrid != null)
+            {
+                IMyCubeGrid ship = obj as IMyCubeGrid;
+                ship.OnClosing -= PreviewShip_OnClosing;
+                ship.OnGridChanged -= PreviewShip_OnGridChanged;
+                ship.OnIsStaticChanged -= PreviewShip_OnIsStaticChanged;
+                
+            }
+
+        }
+
+        private void PreviewShip_OnGridChanged(IMyCubeGrid obj)
+        {
+
+
+            var cockpits = previewShip.GetFatBlocks<IMyCockpit>();
+            foreach (var cockpit in cockpits)
+            {
+                if(cockpit != null)
+                {
+                    if(cockpit.Pilot!=null)
+                    {
+                        cockpit.Pilot.Kill();
+                        //cockpit.Pilot.Die();
+                        MyVisualScriptLogicProvider.ShowNotificationToAll("Unauthorized Pilot Detected!",5000, "Red");
+                        //previewShip.Close();
+                        return;
+                    }
+
+
+                }
+                
+
             }
         }
 
@@ -773,7 +1129,15 @@ namespace Razmods.Dealership
                    
                     if (blockdef != null)
                     {
-                        calculatedprice += blockdef.PCU*10;
+                        int modifier = 1;
+                        if(shipInfo.shipGrid.GridSizeEnum == MyCubeSize.Large)
+                        {
+                            modifier = 200;
+                        } else
+                        {
+                            modifier = 10;
+                        }
+                        calculatedprice += blockdef.PCU* modifier;
 
                     }
 
@@ -847,7 +1211,7 @@ namespace Razmods.Dealership
                     //MyAPIGateway.Utilities.ShowMessage("DEALER", "SMALL SHIP CONNECTED");
                     if (shipInfoPanel != null && largeShipConnector.OtherConnector != null && shipInfo == null)
                     {
-                        IMyCubeGrid grid = smallShipConnector.OtherConnector.Parent as IMyCubeGrid;
+                        IMyCubeGrid grid = largeShipConnector.OtherConnector.Parent as IMyCubeGrid;
                         if (grid != null)
                         {
                             SetShipInfo(grid);
